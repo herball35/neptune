@@ -1,0 +1,488 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<project name="Symfony2 project" default="build" xmlns:if="ant:if" xmlns:unless="ant:unless">
+
+    <!-- Import ant-contrib (for, list, etc) -->
+    <!-- sudo apt-get install ant-contrib -->
+    <!--<taskdef resource="net/sf/antcontrib/antcontrib.properties">
+        <classpath>
+            <pathelement location="/usr/share/java/ant-contrib.jar"/>
+        </classpath>
+    </taskdef>-->
+
+    <!-- Properties -->
+    <property environment="env"/>
+    <property name="codedir" value="${basedir}/src"/>
+    <property name="standards_dir" value="${basedir}/standards" />
+    <property name="symfony2_cs_ruleset" value="${standards_dir}/Symfony2" />
+    <property name="phpmd_ruleset" value="${standards_dir}/PHPMessDetector/ruleset.xml" />
+    <property name="phpmd_bin" value="${basedir}/vendor/phpmd/phpmd/src/bin/phpmd" />
+    <property name="phpunit" value="${basedir}/vendor/phpunit/phpunit/phpunit" />
+    <property name="phpcs_bin" value="${basedir}/vendor/squizlabs/php_codesniffer/scripts/phpcs" />
+    <property name="phpcpd_bin" value="${basedir}/vendor/sebastian/phpcpd/phpcpd" />
+    <property name="phpmd_threshold" value="25" />
+    <property name="checkstyle_threshold" value="1" />
+    <property name="copypaste_threshold" value="3" />
+    <property name="php" value="php" />
+
+    <!-- Simple tasks -->
+
+    <target name="test">
+        <echo message="This is test message. ${config_file}, ${sf_env}, ${sf_debug}, ${sf_debug}" />
+    </target>
+
+    <target name="check-config" description="Check if config_[symfony_env].yml exists.">
+        <echo>Checking if file ${config_file} exists</echo>
+        <fail message="Missing required configuration file '${config_file}'.">
+            <condition>
+                <not>
+                    <available file="${config_file}" />
+                </not>
+            </condition>
+        </fail>
+    </target>
+
+    <target name="copy-parameters" if="parameters_file" >
+        <echo>Copying ${basedir}/app/config/${parameters_file} file to ${parameters}</echo>
+        <fail message="Missing parameters file '${basedir}/app/config/${parameters_file}'.">
+            <condition>
+                <not>
+                    <available file="${basedir}/app/config/${parameters_file}" />
+                </not>
+            </condition>
+        </fail>
+        <copy file="${basedir}/app/config/${parameters_file}" tofile="${parameters}"/>
+    </target>
+
+    <target name="check-parameters" description="Check if parameters.yml exists.">
+        <echo>Checking if file ${parameters} exists</echo>
+        <fail message="Missing required configuration file '${parameters}'.">
+            <condition>
+                <not>
+                    <available file="${parameters}" />
+                </not>
+            </condition>
+        </fail>
+    </target>
+
+    <target name="can-bower" description="Check if composer can be executed.">
+        <echo>Checking if bower can be execute</echo>
+        <condition property="bower-available">
+            <available file="bower" filepath="${env.PATH}" />
+        </condition>
+    </target>
+
+    <target name="phpmd" depends="prepare" description="Perform project mess detection using PHPMD and create a log file for the CI server.">
+        <exec executable="${php}">
+            <arg path="${phpmd_bin}" />
+            <arg path="${codedir}" />
+            <arg value="xml" />
+            <arg value="${phpmd_ruleset}" />
+            <arg value="--reportfile" />
+            <arg value="${basedir}/build/logs/phpmd.xml" />
+        </exec>
+    </target>
+
+    <target name="phpunit-check-coverage" >
+        <condition property="phpunit_coverage" value="true" else="false">
+            <equals arg1="${with_coverage_report}" arg2="true" />
+        </condition>
+    </target>
+
+    <target name="phpunit-with-coverage" if="${phpunit_coverage}" >
+        <exec executable="${basedir}/bin/phpunit" failonerror="true">
+            <arg value="-c" />
+            <arg path="${basedir}/app" />
+            <arg path="${codedir}/" />
+        </exec>
+        <exec executable="${basedir}/bin/phpunit" failonerror="true">
+            <arg value="-d" />
+            <arg value="zend.enable_gc=0" />
+            <arg value="-c" />
+            <arg path="${basedir}/app" />
+            <arg value="--group" />
+            <arg value="gc_disabled" />
+            <arg path="${codedir}/" />
+        </exec>
+    </target>
+
+    <target name="phpunit-without-coverage" unless="${phpunit_coverage}" >
+        <exec executable="${basedir}/bin/phpunit" failonerror="true">
+            <arg value="-c" />
+            <arg path="${basedir}/app/phpunit_xdebug_off.xml.dist" />
+            <arg path="${codedir}/" />
+        </exec>
+        <exec executable="${basedir}/bin/phpunit" failonerror="true">
+            <arg value="-d" />
+            <arg value="zend.enable_gc=0" />
+            <arg value="-c" />
+            <arg path="${basedir}/app/phpunit_xdebug_off.xml.dist" />
+            <arg value="--group" />
+            <arg value="gc_disabled" />
+            <arg path="${codedir}/" />
+        </exec>
+    </target>
+
+    <target name="phpunit-filter-test" description="Run specified by given filter test with PHPUnit">
+        <input message="Insert filter string:" addProperty="testName"/>
+        <exec executable="${basedir}/bin/phpunit" failonerror="true">
+            <arg value="--filter" />
+            <arg value="${testName}" />
+            <arg value="--debug" />
+            <arg value="-v" />
+            <arg value="-c" />
+            <arg path="${basedir}/app" />
+        </exec>
+    </target>
+
+    <target name="php-cs-fixer" description="Execute php-cs-fixer on base path">
+        <echo message="-> Php-cs-fixer:" />
+        <echo message="> ${basedir}/src:" />
+        <exec executable="php-cs-fixer" failonerror="true">
+            <arg value="fix" />
+            <arg value="-v" />
+            <arg value="${basedir}/src" />
+        </exec>
+    </target>
+
+    <target name="phpdoc" depends="prepare" description="Generate API documentation using PHPDocumentor">
+        <exec executable="phpdoc">
+            <arg value="--directory" />
+            <arg path="${codedir}" />
+            <arg value="--target" />
+            <arg path="${basedir}/build/api" />
+        </exec>
+    </target>
+
+    <target name="phpcb" depends="prepare" description="Aggregate tool output with PHP_CodeBrowser">
+        <exec executable="phpcb">
+            <arg value="--log" />
+            <arg path="${basedir}/build/logs" />
+            <arg value="--source" />
+            <arg path="${codedir}" />
+            <arg value="--output" />
+            <arg path="${basedir}/build/code-browser" />
+        </exec>
+    </target>
+
+    <target name="phpmd-threshold-check">
+        <echo>Checking if Mess Detector violations number is less than ${phpmd_threshold}</echo>
+        <exec executable="bash" failonerror="true" outputproperty="phpmd_violations">
+            <arg value="-c"/>
+            <arg value="'${phpmd_bin}' '${codedir}' xml '${phpmd_ruleset}' --exclude 'MigrationBundle','OptimaBundle' | xmllint --xpath 'count(//violation)' -"/>
+        </exec>
+        <echo>Mess Detector violations: ${phpmd_violations}</echo>
+        <exec executable="bash" failonerror="true">
+            <arg value="-c"/>
+            <arg value="test '${phpmd_violations}' -lt ${phpmd_threshold}"/>
+        </exec>
+    </target>
+
+    <target name="phpcs-threshold-check">
+        <echo>Checking if Checkstyle violations number is less than ${checkstyle_threshold}</echo>
+        <exec executable="bash" failonerror="true" outputproperty="checkstyle_violations">
+            <arg value="-c"/>
+            <arg value="phpcs --report=csv '${codedir}' --ignore=Tests/ --standard='${symfony2_cs_ruleset}' | tail -n +2 | wc -l"/>
+        </exec>
+        <echo>Checkstyle violations: ${checkstyle_violations}</echo>
+        <exec executable="bash" failonerror="true">
+            <arg value="-c"/>
+            <arg value="test ${checkstyle_violations} -lt ${checkstyle_threshold}"/>
+        </exec>
+    </target>
+
+    <target name="phpcpd-threshold-check">
+        <echo>Checking if Copy Paste violations number is less than ${copypaste_threshold}</echo>
+        <exec executable="bash" failonerror="true" outputproperty="copypaste_violations">
+            <arg value="-c"/>
+            <arg value="phpcpd '${codedir}' --exclude Tests| egrep 'Found [0-9]+ exact clones' -o  | egrep [0-9]+ -o || echo 0"/>
+        </exec>
+        <echo>Copy paste violations: ${copypaste_violations}</echo>
+        <exec executable="bash" failonerror="true">
+            <arg value="-c"/>
+            <arg value="test ${copypaste_violations} -lt ${copypaste_threshold}"/>
+        </exec>
+    </target>
+
+    <target name="clear-cache">
+        <echo>Clear cache</echo>
+        <echo>Command: ${php} ${basedir}/app/console cache:clear --no-warmup ${sf_env_arg} ${sf_debug_arg}</echo>
+        <exec executable="${php}" failonerror="true">
+            <arg value="${basedir}/app/console" />
+            <arg value="cache:clear" />
+            <arg value="--no-warmup" />
+            <arg value="${sf_env_arg}" />
+            <arg value="${sf_debug_arg}" unless:blank="${sf_debug_arg}" />
+        </exec>
+    </target>
+
+
+    <target name="behat" description="Run Behat tests.">
+        <exec executable="${php}" failonerror="true">
+            <arg value="${basedir}/app/console" />
+            <arg value="${sf_env_arg}" />
+            <arg value="behat" />
+        </exec>
+    </target>
+
+    <target name="fixtures" description="Build database fixtures.">
+        <echo>Build database fixtures.</echo>
+        <echo>Command: ${php} ${basedir}/app/console doctrine:fixtures:load ${sf_env_arg}</echo>
+        <exec executable="${php}" failonerror="true">
+            <arg value="${basedir}/app/console" />
+            <arg value="doctrine:fixtures:load" />
+            <arg value="${sf_env_arg}" />
+        </exec>
+    </target>
+
+    <target name="schema-update" description="Update database schema">
+        <echo>Update database schema</echo>
+        <echo>Command: ${php} ${basedir}/app/console doctrine:schema:update --force ${sf_env_arg} ${sf_debug_arg}</echo>
+        <exec executable="${php}" failonerror="true">
+            <arg value="${basedir}/app/console" />
+            <arg value="doctrine:schema:update" />
+            <arg value="--force" />
+            <arg value="${sf_env_arg}" />
+        </exec>
+    </target>
+
+    <target name="schema-drop" description="Drop database schema">
+        <echo>Drop database schema</echo>
+        <echo>Command: ${php} ${basedir}/app/console doctrine:schema:drop --force ${sf_env_arg} ${sf_debug_arg}</echo>
+        <exec executable="${php}" failonerror="true">
+            <arg value="${basedir}/app/console" />
+            <arg value="doctrine:schema:drop" />
+            <arg value="--force" />
+            <arg value="${sf_env_arg}" />
+        </exec>
+    </target>
+
+    <target name="database-drop" depends="check-env" description="Drop database" >
+        <echo>Drop database</echo>
+        <echo>Command: ${php} ${basedir}/app/console doctrine:database:drop --force ${sf_env_arg}</echo>
+        <exec executable="${php}" failonerror="false">
+            <arg value="${basedir}/app/console" />
+            <arg value="doctrine:database:drop" />
+            <arg value="--force" />
+            <arg value="${sf_env_arg}" />
+        </exec>
+    </target>
+
+    <target  name="database-create" depends="check-env" description="Create database" >
+        <echo>Create database</echo>
+        <echo>Command: ${php} ${basedir}/app/console doctrine:database:create --no-interaction ${sf_env_arg}</echo>
+        <exec executable="${php}" failonerror="true">
+            <arg value="${basedir}/app/console" />
+            <arg value="doctrine:database:create" />
+            <arg value="--no-interaction" />
+            <arg value="${sf_env_arg}" />
+        </exec>
+    </target>
+
+    <target name="migrations" depends="check-env">
+        <echo>Executing migrations</echo>
+        <echo>Command: ${php} ${basedir}/app/console doctrine:migrations:migrate --no-interaction ${sf_env_arg} ${sf_debug_arg}</echo>
+        <exec executable="${php}">
+            <arg value="${basedir}/app/console" />
+            <arg value="doctrine:migrations:migrate" />
+            <arg value="--no-interaction" />
+            <arg value="${sf_env_arg}" />
+            <arg value="${sf_debug_arg}" unless:blank="${sf_debug_arg}" />
+        </exec>
+    </target>
+
+    <target name="schema-validate" depends="check-env">
+        <echo>Schema validate</echo>
+        <echo>Command: ${php} ${basedir}/app/console doctrine:schema:validate --no-interaction ${sf_env_arg}</echo>
+        <exec executable="${php}" failonerror="true">
+            <arg value="${basedir}/app/console" />
+            <arg value="doctrine:schema:validate" />
+            <arg value="--no-interaction" />
+            <arg value="${sf_env_arg}" />
+        </exec>
+    </target>
+
+    <target name="can-fix-permissions" description="Check if command fixing permissions as required by Symfony2 can be executed.">
+        <condition property="fix-permissions-script-available">
+            <available file="xs-correct-dev-permissions" filepath="${env.PATH}" />
+        </condition>
+    </target>
+
+    <target name="fix-permissions" description="Fix permissions as required by Symfony2." if="fix-permissions-script-available">
+        <echo message="Running xs correct permissions" />
+        <exec executable="xs-correct-dev-permissions">
+            <arg value="${basedir}/app/cache" />
+        </exec>
+        <exec executable="xs-correct-dev-permissions">
+            <arg value="${basedir}/app/logs" />
+        </exec>
+    </target>
+
+    <target name="js-routes-dump">
+        <exec executable="${php}" failonerror="true">
+            <arg value="${basedir}/app/console" />
+            <arg value="fos:js-routing:dump" />
+            <arg value="${sf_env_arg}" />
+        </exec>
+    </target>
+
+    <target name="can-schema-rebuild">
+        <fail message="This cannot be called on environment '${sf_env}'.">
+            <condition>
+                <or>
+                    <equals arg1="${sf_env}" arg2="stage" />
+                    <equals arg1="${sf_env}" arg2="prod" />
+                </or>
+            </condition>
+        </fail>
+    </target>
+
+    <target name="assets-refresh" depends="assets, assetic" />
+
+    <target name="js-translation-dump">
+        <exec executable="${php}" failonerror="true">
+            <arg value="${basedir}/app/console" />
+            <arg value="bazinga:js-translation:dump" />
+            <arg value="${sf_env_arg}" />
+        </exec>
+    </target>
+
+    <!-- wyłączenie schema-validate, ponieważ Doctrine nie obsługuje indeksów na trzech kolumnach  -->
+    <target name="db-rebuild" description="Update database schema." depends="can-schema-rebuild, database-drop, database-create, schema-update, migrations, fixtures">
+        <echo>Rebuilding database</echo>
+    </target>
+
+    <target name="db-update" depends="schema-update, migrations">
+        <echo>Updating database</echo>
+    </target>
+
+    <target name="db-init" depends="schema-update, migrations, fixtures">
+        <echo>Initialization database</echo>
+    </target>
+
+    <target name="update" depends="compose, remove-cache, db-update, assets-refresh" />
+    <target name="local" depends="compose, remove-cache, db-rebuild, assets-refresh"/>
+    <target name="local_assets" depends="assets-refresh"/>
+    <target name="ci" depends="compose, prepare, remove-cache, phpcs-cli, lint, twig-lint, db-init, pdepend, phpmd-cli, phpcpd, phploc, assets-refresh, phpunit" />
+
+
+    <target name="compose" description="Run composer, bower to install vendors.">
+        <exec executable="composer" failonerror="true">
+            <arg value="install" />
+        </exec>
+    </target>
+
+    <target name="clean" description="Remove build data.">
+        <delete dir="${basedir}/build/api"/>
+        <delete dir="${basedir}/build/code-browser"/>
+        <delete dir="${basedir}/build/coverage"/>
+        <delete dir="${basedir}/build/logs"/>
+        <delete dir="${basedir}/build/pdepend"/>
+        <delete dir="${basedir}/web/coverage"/>
+        <delete dir="${basedir}/app/cache/test"/>
+    </target>
+
+    <target name="prepare" unless="ci_prepared" depends="clean" description="Prepare directories for build data.">
+        <mkdir dir="${basedir}/build/api"/>
+        <mkdir dir="${basedir}/build/code-browser"/>
+        <mkdir dir="${basedir}/build/coverage"/>
+        <mkdir dir="${basedir}/build/logs"/>
+        <mkdir dir="${basedir}/build/pdepend"/>
+        <mkdir dir="${basedir}/web/coverage"/>
+        <property name="ci_prepared" value="true"/>
+    </target>
+
+    <target name="remove-cache" description="Cleanup cache." depends="check-directory-cache" if="cache_directory_exist">
+        <echo>Removing app cache from directory ${basedir}/app/cache/</echo>
+        <delete includeemptydirs="true">
+            <fileset dir="${basedir}/app/cache/">
+                <include name="**/*"/>
+                <exclude name=".gitkeep"/>
+            </fileset>
+        </delete>
+    </target>
+
+    <target name="check-directory-cache">
+        <available file="${basedir}/app/cache/" property="cache_directory_exist"/>
+    </target>
+
+    <target name="phpcs-cli" description="Find coding standard violations using PHP_CodeSniffer.">
+        <exec executable="${basedir}/bin/phpcs"  failonerror="true">
+            <arg value="--extensions=php" />
+            <arg value="--report=full" />
+            <arg value="--standard=${symfony2_cs_ruleset}" />
+            <arg path="${codedir}" />
+        </exec>
+    </target>
+
+    <target name="lint" description="Run PHP lint on all *.php files in code directory.">
+        <exec executable="sh" failonerror="true">
+            <arg value="-c" />
+            <arg value="find ${codedir} -name *.php -print0 | xargs -0 -n1 -P0 php -l"/>
+        </exec>
+    </target>
+
+    <target name="pdepend" depends="prepare" description="Calculate software metrics using PHP_Depend and create a log file for the CI server.">
+        <exec executable="${basedir}/bin/pdepend">
+            <arg value="--jdepend-xml=${basedir}/build/logs/jdepend.xml" />
+            <arg value="--jdepend-chart=${basedir}/build/pdepend/dependencies.svg" />
+            <arg value="--overview-pyramid=${basedir}/build/pdepend/overview-pyramid.svg" />
+            <arg path="${codedir}" />
+        </exec>
+    </target>
+
+    <target name="phpmd-cli" description="Perform project mess detection using PHPMD.">
+        <exec executable="${php}">
+            <arg path="${phpmd_bin}" />
+            <arg path="${codedir}" />
+            <arg value="text" />
+            <arg value="${phpmd_ruleset}" />
+        </exec>
+    </target>
+
+    <target name="phpcpd" depends="prepare" description="Find duplicate code using PHPCPD">
+        <exec executable="${php}" failonerror="false">
+            <arg value="${phpcpd_bin}" />
+            <arg value="--log-pmd" />
+            <arg value="${basedir}/build/logs/pmd-cpd.xml" />
+            <arg path="${codedir}" />
+            <arg value="--exclude" />
+            <arg value="Tests" />
+        </exec>
+    </target>
+
+    <target name="phploc" depends="prepare" description="Measure project size using PHPLOC.">
+        <exec executable="${basedir}/bin/phploc">
+            <arg value="--log-csv" />
+            <arg value="${basedir}/build/logs/phploc.csv" />
+            <arg path="${codedir}" />
+        </exec>
+    </target>
+
+    <target name="assets" description="Install assets.">
+        <echo>Install assets</echo>
+        <echo>Command: ${php} ${basedir}/app/console assets:install ${basedir}/web ${sf_env_arg}</echo>
+        <exec executable="${php}" failonerror="true">
+            <arg value="${basedir}/app/console" />
+            <arg value="assets:install" />
+            <arg value="${basedir}/web" />
+            <arg value="${sf_env_arg}" />
+        </exec>
+    </target>
+
+    <target name="assetic" description="Dump Assetic assets for ${sf_env} environment." depends="js-routes-dump, js-translation-dump">
+        <echo>Dump Assetic assets.</echo>
+        <echo>Command: ${php} ${basedir}/app/console assetic:dump ${sf_env_arg}</echo>
+        <exec executable="${php}" failonerror="true">
+            <arg value="${basedir}/app/console" />
+            <arg value="assetic:dump" />
+            <arg value="${sf_env_arg}" />
+            <arg value="${sf_debug_arg}" unless:blank="${sf_debug_arg}" />
+        </exec>
+    </target>
+
+    <target name="phpunit" depends="phpunit-check-coverage, phpunit-with-coverage, phpunit-without-coverage" description="Run unit tests with PHPUnit">
+    </target>
+
+    <target name="build" depends="compose, prepare, remove-cache, phpcs-cli, lint, pdepend, phpmd-cli, phpcpd, phploc, assets-refresh" />
+</project>

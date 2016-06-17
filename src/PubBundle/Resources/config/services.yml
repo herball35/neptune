@@ -1,0 +1,24 @@
+services:
+    neptune.latitude:
+        class: PubBundle\Domain\ValueObject\Latitude
+        arguments: [%neptune_coordinates_latitude%]
+    neptune.longitude:
+        class: PubBundle\Domain\ValueObject\Longitude
+        arguments: [%neptune_coordinates_longitude%]
+    neptune.location:
+        class: PubBundle\Domain\ValueObject\Location
+        arguments: ["@neptune.latitude", "@neptune.longitude"]
+    location.factory.fromCoordinates:
+        class: PubBundle\Domain\Factory\CoordinatesCommaSeparatedLocationFactory
+    location.kilometerDistanceCalculator:
+        class: PubBundle\Component\Location\SimpleKilometerDistanceCalculator
+    location.locationToPlaceIds.testReadRepository:
+        class: PubBundle\Component\Location\TestLocationToPlaceIdsReadRepository
+    place.locationRelationFactory:
+        class: PubBundle\Domain\Factory\CalculatorBasedLocationRelationFactory
+        arguments: ["@location.kilometerDistanceCalculator"]
+    place.testReadRepository:
+        class: PubBundle\Domain\ReadRepository\TestPlaceReadRepository
+    place.nearbyPlacesReadRepository:
+        class: PubBundle\Domain\ReadRepository\TestNearbyPlacesReadRepository
+        arguments: ["@place.testReadRepository", "@location.locationToPlaceIds.testReadRepository", "@place.locationRelationFactory"]

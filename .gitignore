@@ -1,0 +1,29 @@
+/app/bootstrap.php.cache
+/app/cache/*
+!app/cache/.gitkeep
+/app/config/parameters.yml
+/app/logs/*
+!app/logs/.gitkeep
+/app/phpunit.xml
+/bin/*
+!/bin/convert.php
+/vendor/
+/web/vendor/
+/web/bundles/
+/web/css/
+/web/js/
+/web/images/
+/build/*
+!/build/.gitkeep
+
+*.orig
+*.php~
+cache.properties
+# katalog projektu PHP Storm / NetBeans
+/.idea/
+/nbproject/
+# katalog projektu Sublime Text
+pragma.sublime-project
+pragma.sublime-workspace
+/.vagrant/
+Vagrantfile

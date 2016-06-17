@@ -1,0 +1,4 @@
+pub_place:
+    resource: "@PubBundle/Controller/ApiController.php"
+    prefix: /pubApi/
+    type: rest
