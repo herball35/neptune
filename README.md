@@ -16,7 +16,9 @@ Current version is 0.1.0 and it contains concepts of domain model and rest api.
 * ssh
 
 ### Do it step by step
-
+* clone project repository `git clone https://github.com/herball35/neptune.git`
+* enter to project directory `cd neptune`
+* run vagrant virtual machine ``
 
 ## How to use it?
 
