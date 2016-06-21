@@ -24,7 +24,7 @@ class TestPlaceReadRepository implements PlaceReadRepository
         }
 
         $places = [];
-        foreach($ids as $id) {
+        foreach ($ids as $id) {
             $places[] = $this->getPlaceForId($id);
         }
 

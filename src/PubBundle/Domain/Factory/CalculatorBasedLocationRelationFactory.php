@@ -22,9 +22,7 @@ class CalculatorBasedLocationRelationFactory implements LocationRelationFactory
     }
 
     /**
-     * @param Location $location
-     * @param Place $relatedPlace
-     * @return LocationRelation
+     * {@inheritdoc}
      */
     public function createLocationRelation(Location $location, Place $relatedPlace)
     {

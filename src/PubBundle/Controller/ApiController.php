@@ -19,7 +19,8 @@ class ApiController extends FOSRestController
      *          "name" = "coordinates",
      *          "dataType" = "string",
      *          "requirement" = "/-?([0-9]){1,2}(\.[0-9]{0,8})?,-?([0-9]){1,3}(\.[0-9]{0,8})?/",
-     *          "description" = "Latitude and longitude of location for which the list of nearest pub is given, examples: 55.123,12.234 or -80.99,-160.456 "
+     *          "description" = "Latitude and longitude of location for which the list of nearest pub is given,
+     *              examples: 55.123,12.234 or -80.99,-160.456 "
      *      }
      *  },
      *  statusCodes = {
@@ -73,7 +74,7 @@ class ApiController extends FOSRestController
         /** @var NearbyPlacesReadRepository $readRepository */
         $readRepository = $this->container->get('place.nearbyPlacesReadRepository');
         $nearbyPlaces = $readRepository->getByLocation($location);
-        $view = $this->view($nearbyPlaces,200);
+        $view = $this->view($nearbyPlaces, 200);
         return $this->handleView($view);
     }
 }

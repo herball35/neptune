@@ -1,26 +1,27 @@
 <?php
 namespace PubBundle\TypeValidationTrait;
 
-trait PositiveFloatVerifyingTrait
+trait PositiveIntegerVerifyingTrait
 {
     /**
      * @param mixed $value
      * @param string $name
-     * @return float
+     * @return int
      * @throws \InvalidArgumentException
      */
-    protected function verifyPositiveFloat($value, $name = 'Value')
+    protected function verifyPositiveInteger($value, $name = 'Value')
     {
-        $value = $value = filter_var($value, FILTER_VALIDATE_FLOAT);
+        $value = filter_var($value, FILTER_VALIDATE_INT);
+
         if ($value === false) {
-            $message = sprintf("%s has to be an float", $name);
+            $message = sprintf("%s has to be an integer", $name);
             throw new \InvalidArgumentException($message);
         }
 
-        $value = (float)$value;
+        $value = (int)$value;
 
         if ($value <= 0) {
-            $message = sprintf("%s has to be a positive float", $name);
+            $message = sprintf("%s has to be a positive number", $name);
             throw new \InvalidArgumentException($message);
         }
 

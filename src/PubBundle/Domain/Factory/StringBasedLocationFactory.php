@@ -10,4 +10,4 @@ interface StringBasedLocationFactory
      * @return Location
      */
     public function createFromString($string);
-} 
+}

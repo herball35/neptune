@@ -5,7 +5,8 @@ use PubBundle\Domain\ValueObject\Location;
 use PubBundle\Domain\ValueObject\PlaceId;
 use PubBundle\TypeValidationTrait\ArrayCollectionCastTrait;
 
-class LocationToPlaceIds {
+class LocationToPlaceIds
+{
     use ArrayCollectionCastTrait;
 
     /**

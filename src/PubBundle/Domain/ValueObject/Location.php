@@ -1,7 +1,6 @@
 <?php
 namespace PubBundle\Domain\ValueObject;
 
-
 class Location
 {
     /**

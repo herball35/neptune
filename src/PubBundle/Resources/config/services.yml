@@ -19,6 +19,27 @@ services:
         arguments: ["@location.kilometerDistanceCalculator"]
     place.testReadRepository:
         class: PubBundle\Domain\ReadRepository\TestPlaceReadRepository
-    place.nearbyPlacesReadRepository:
+    place.testNearbyPlacesReadRepository:
         class: PubBundle\Domain\ReadRepository\TestNearbyPlacesReadRepository
         arguments: ["@place.testReadRepository", "@location.locationToPlaceIds.testReadRepository", "@place.locationRelationFactory"]
+    # Google based searching
+    barSearch.searchParameters.radius:
+        class: PubBundle\Component\GooglePlaceSearcher\SearchParameter\RadiusSearchParameter
+        arguments: [%bar_search_radius%]
+    barSearch.searchParameters.locationtype:
+        class: PubBundle\Component\GooglePlaceSearcher\SearchParameter\LocationTypeSearchParameter
+        arguments: [%bar_search_location_type%]
+    barSearch.nearbySearchParametersProvider:
+        class: PubBundle\Component\BarSearch\BarNearbySearchParametersProvider
+        arguments: ["@barSearch.searchParameters.radius", "@barSearch.searchParameters.locationtype"]
+    googleSearcher.apiClient:
+        class: PubBundle\Component\GooglePlaceSearcher\ZendHttpBasedPlaceApiClient
+        arguments: [%google_api_url%, %google_api_key%, %google_api_lang%, "@logger"]
+    googleSearcher.nearbayPlacesSearcher:
+        class: PubBundle\Component\GooglePlaceSearcher\NearbyPlacesSearcher
+        arguments: ["@googleSearcher.apiClient"]
+    googleSearcher.resultMapper:
+            class: PubBundle\Domain\ReadRepository\SimpleGoogleResultToPlaceMapper
+    place.nearbyPlacesReadRepository:
+        class: PubBundle\Domain\ReadRepository\GoogleNearbyPlacesReadRepository
+        arguments: ["@googleSearcher.nearbayPlacesSearcher", "@barSearch.nearbySearchParametersProvider", "@googleSearcher.resultMapper", "@place.locationRelationFactory"]

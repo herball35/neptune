@@ -10,6 +10,11 @@ parameters:
     locale: en
     neptune_coordinates_latitude: 54.3488976
     neptune_coordinates_longitude: 18.653141
+    google_api_url: "https://maps.googleapis.com/maps/api/place"
+    google_api_key: "AIzaSyDNOJqKuHJ6M-SqDLQfG_-uNXAwmEanqBg"
+    google_api_lang: "pl"
+    bar_search_radius: 2000
+    bar_search_location_type: bar
 
 framework:
     #esi:             ~

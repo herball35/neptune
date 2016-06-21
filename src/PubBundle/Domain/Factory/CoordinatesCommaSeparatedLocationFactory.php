@@ -21,7 +21,8 @@ class CoordinatesCommaSeparatedLocationFactory implements StringBasedLocationFac
         $coordinates = explode(self::SEPARATOR, $coordinates);
         if (count($coordinates) != 2) {
             throw new \InvalidArgumentException(sprintf(
-                '%d coordinates found. Coordinates have to be separated by "%s", and there has to be exactly two coordinates: latitude%slongitude',
+                '%d coordinates found. Coordinates have to be separated by "%s", ' .
+                'and there has to be exactly two coordinates: latitude%slongitude',
                 count($coordinates),
                 self::SEPARATOR,
                 self::SEPARATOR

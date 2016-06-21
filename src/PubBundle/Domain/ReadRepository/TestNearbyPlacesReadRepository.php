@@ -43,7 +43,6 @@ class TestNearbyPlacesReadRepository implements NearbyPlacesReadRepository
             $relations[] = $this->locationRelationFactory->createLocationRelation($location, $relatedPlace);
         }
 
-        return new NearbyPlaces($location,$relations);
+        return new NearbyPlaces($location, $relations);
     }
-
 }

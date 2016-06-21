@@ -27,7 +27,7 @@ class Place
      */
     private $location;
     /**
-     * @var Rating
+     * @var Rating|null
      */
     private $rating;
 
@@ -43,12 +43,15 @@ class Place
         $name,
         $address,
         Location $location,
-        Rating $rating
+        $rating = null
     ) {
         $this->id = $id;
         $this->name = $this->verifyNonEmptyString($name, 'Place name');
         $this->address = $this->verifyNonEmptyString($address, 'Place address');
         $this->location = $location;
+        if ($rating !== null && !$rating instanceof Rating) {
+            throw new \InvalidArgumentException('Rating has to be null or Rating class type.');
+        }
         $this->rating = $rating;
     }
 
@@ -85,11 +88,10 @@ class Place
     }
 
     /**
-     * @return Rating
+     * @return Rating|null
      */
     public function getRating()
     {
         return $this->rating;
     }
-
 }

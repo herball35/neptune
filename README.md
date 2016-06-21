@@ -2,9 +2,10 @@
 
 This is a simple rest api which providers information about pubs located near the designated location.
 
-## Version
+## Change logo
 
-Current version is 0.1.0 and it contains concepts of domain model and rest api.
+* 0.2.0 | 2016-06-21 | Added Google Place API and use of it.
+* 0.1.0 | 2016-06-17 | Concept of domain model and rest api.
 
 ## How to run it?
 
